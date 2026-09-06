@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1e3a8a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>DCL Logbook</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#0b1220; --card:#151e31; --card2:#1b2540; --border:#24314f;
+  --text:#e7edf7; --muted:#8b98b5; --accent:#2f6bff; --accent2:#4f8cff;
+  --good:#34d399; --warn:#fbbf24; --bad:#f87171;
+  --tabbar-h:62px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  overscroll-behavior-y:none}
+body{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
+
+/* Banner */
+.banner{position:sticky;top:0;z-index:50;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 12px;
+  background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 60%,#3b82f6 100%);
+  box-shadow:0 2px 12px rgba(0,0,0,.45)}
+.banner h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.3px}
+.banner p{margin:2px 0 0;font-size:12.5px;color:#cfe0ff}
+
+/* Tabs */
+.tabs{position:fixed;bottom:0;left:0;right:0;z-index:60;height:calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);display:flex;background:#0e1626;border-top:1px solid var(--border)}
+.tabs button{flex:1;border:0;background:none;color:var(--muted);font-size:11px;font-weight:600;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer}
+.tabs button svg{width:22px;height:22px}
+.tabs button.active{color:var(--accent2)}
+.page{display:none;padding:14px 14px 20px;max-width:640px;margin:0 auto}
+.page.active{display:block}
+
+/* Cards & stats */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
+.stat .v{font-size:24px;font-weight:700;margin-top:2px}
+.stat .u{font-size:13px;color:var(--muted);font-weight:600}
+.stat .l{font-size:12px;color:var(--muted);margin-top:4px}
+.stat.wide{grid-column:1/-1;display:flex;align-items:center;gap:14px}
+.stat.wide .big{font-size:40px;font-weight:800;color:var(--accent2);line-height:1}
+.stat .sub{font-size:11.5px;color:var(--muted);margin-top:3px}
+.hero{background:linear-gradient(135deg,#16224a,#101a38);border-color:#2b3c6e}
+.section-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.8px;margin:18px 2px 8px}
+.rec{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--border);font-size:14px}
+.rec:first-of-type{border-top:0}
+.rec .rv{font-weight:700;color:var(--accent2)}
+.rec .jump-link{color:var(--muted);font-size:12px;text-decoration:underline;background:none;border:0;cursor:pointer;padding:0}
+
+/* Logbook */
+.toolbar{display:flex;gap:8px;margin-bottom:12px}
+.toolbar input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;color:var(--text);font-size:14px;outline:none}
+.toolbar input:focus{border-color:var(--accent)}
+.toolbar select{background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px;font-size:13px}
+.btn{border:0;border-radius:12px;padding:13px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  background:var(--accent);color:#fff;width:100%}
+.btn.secondary{background:var(--card2);color:var(--text);border:1px solid var(--border)}
+.btn.danger{background:#7f1d1d}
+.btn-row{display:flex;gap:10px}
+.jump-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;
+  margin-bottom:10px;display:flex;gap:12px;align-items:center;cursor:pointer}
+.jump-item:active{background:var(--card2)}
+.jump-num{min-width:44px;height:44px;border-radius:12px;background:#1c2a52;color:var(--accent2);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px}
+.jump-main{flex:1;min-width:0}
+.jump-main .t{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jump-main .s{font-size:12.5px;color:var(--muted);margin-top:2px}
+.jump-metrics{text-align:right;font-size:12px;color:var(--muted);line-height:1.5}
+.jump-metrics b{color:var(--text);font-weight:600}
+.flag{display:inline-block;background:#3f2d12;color:var(--warn);border-radius:6px;
+  font-size:10px;font-weight:700;padding:1px 6px;margin-left:6px;vertical-align:1px}
+.cut-badge{display:inline-block;background:#3f1212;color:var(--bad);border-radius:6px;
+  font-size:10px;font-weight:700;padding:1px 6px;margin-left:6px;vertical-align:1px}
+.fab{position:fixed;right:16px;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 14px);
+  width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:28px;
+  box-shadow:0 4px 16px rgba(47,107,255,.45);cursor:pointer;z-index:55}
+
+/* More */
+.row{display:flex;justify-content:space-between;align-items:center;padding:13px 2px;border-bottom:1px solid var(--border);font-size:14.5px}
+.row:last-child{border-bottom:0}
+.row .hint{font-size:12px;color:var(--muted);margin-top:2px}
+.row button{background:var(--card2);border:1px solid var(--border);color:var(--text);
+  border-radius:9px;padding:8px 13px;font-size:13px;font-weight:600;cursor:pointer}
+.row button:active{background:var(--border)}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
+
+/* Modal form */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;
+  align-items:flex-end;justify-content:center}
+.modal-backdrop.open{display:flex}
+.modal{background:#101a30;border:1px solid var(--border);border-radius:18px 18px 0 0;width:100%;max-width:640px;
+  max-height:92vh;overflow-y:auto;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.modal h2{margin:0 0 12px;font-size:17px}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 12px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field.full{grid-column:1/-1}
+.field label{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.field input,.field select,.field textarea{background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:11px 12px;color:var(--text);font-size:15px;outline:none;width:100%}
+.field input:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:56px;font-family:inherit}
+.field .note{font-size:11px;color:var(--muted)}
+.check-row{display:flex;flex-direction:row;align-items:center;gap:10px;padding:10px 2px;font-size:14px}
+.modal .btn{margin-top:12px}
+
+/* Toast */
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabbar-h) + 20px);
+  background:#1c2a52;border:1px solid var(--accent);color:#fff;padding:10px 18px;border-radius:12px;
+  font-size:13.5px;font-weight:600;z-index:200;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.show{opacity:1}
+
+/* Print (PDF export) */
+@media print{
+  body{background:#fff;color:#000;padding:0}
+  .banner,.tabs,.fab,.toolbar,#toast,.modal-backdrop,.no-print{display:none!important}
+  .page{display:block!important;max-width:none}
+  .card,.stat,.jump-item{border-color:#ccc;background:#fff;color:#000;break-inside:avoid}
+  .jump-num{background:#eee;color:#000}
+  .print-only{display:block!important}
+}
+.print-only{display:none}
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <h1>DCL Logbook</h1>
+  <p id="bannerSub"></p>
+</div>
+
+<!-- SUMMARY -->
+<div class="page active" id="page-summary">
+  <div class="stat hero wide">
+    <div class="big" id="stTotal">0</div>
+    <div><div style="font-weight:700">Total jumps</div>
+    <div class="sub" id="stTotalSub"></div></div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat"><div class="u">Total freefall</div><div class="v" id="stFft">0s</div><div class="l" id="stFftSub"></div></div>
+    <div class="stat"><div class="u">Cutaways</div><div class="v" id="stCut">0</div><div class="l">main releases</div></div>
+    <div class="stat" id="cardMaxAlt" style="cursor:pointer"><div class="u">Max exit altitude</div><div class="v" id="stMaxAlt">—</div><div class="l" id="stMaxAltSub">tap to view jump</div></div>
+    <div class="stat" id="cardMaxFft" style="cursor:pointer"><div class="u">Max freefall time</div><div class="v" id="stMaxFft">—</div><div class="l" id="stMaxFftSub">tap to view jump</div></div>
+  </div>
+  <div class="section-title">Records</div>
+  <div class="card">
+    <div class="rec"><span>Highest exit altitude</span><span class="rv" id="recAlt">—</span></div>
+    <div class="rec"><span>Longest freefall</span><span class="rv" id="recFft">—</span></div>
+    <div class="rec"><span>Average freefall</span><span class="rv" id="recAvg">—</span></div>
+    <div class="rec"><span>Drop zones visited</span><span class="rv" id="recDz">—</span></div>
+    <div class="rec"><span>Aircraft used</span><span class="rv" id="recAc">—</span></div>
+    <div class="rec"><span>First jump</span><span class="rv" id="recFirst">—</span></div>
+    <div class="rec"><span>Last jump</span><span class="rv" id="recLast">—</span></div>
+  </div>
+</div>
+
+<!-- LOGBOOK -->
+<div class="page" id="page-logbook">
+  <div class="toolbar no-print">
+    <input id="search" type="search" placeholder="Search type, DZ, aircraft, notes…">
+    <select id="filterYear"><option value="">All years</option></select>
+  </div>
+  <div id="jumpList"></div>
+</div>
+
+<!-- MORE -->
+<div class="page" id="page-more">
+  <div class="section-title">Gear</div>
+  <div class="card" id="gearList"></div>
+
+  <div class="section-title">Import / Export</div>
+  <div class="card">
+    <div class="row"><div>Export CSV<div class="hint">Boogie-compatible format</div></div><button id="btnCsv">Export</button></div>
+    <div class="row"><div>Export PDF<div class="hint">Print-ready logbook</div></div><button id="btnPdf">Export</button></div>
+    <div class="row"><div>Backup JSON<div class="hint">Full data backup &amp; restore</div></div>
+      <div style="display:flex;gap:8px"><button id="btnBk">Export</button><button id="btnRestore">Import</button></div></div>
+    <div class="row"><div>Import CSV<div class="hint">Merge jumps from Boogie CSV</div></div><button id="btnImportCsv">Import</button></div>
+  </div>
+
+  <div class="section-title">Settings</div>
+  <div class="card">
+    <div class="row"><div>Auto jump number<div class="hint">Suggest next number in Add form</div></div>
+      <input type="checkbox" id="setAutoNum" checked></div>
+    <div class="row"><div>Default gear<div class="hint">Pre-filled in Add form</div></div>
+      <select id="setGear" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px"></select></div>
+    <div class="row"><div>Show metric units<div class="hint">Altitude in metres, FFT in seconds (fixed: Italy metric)</div></div>
+      <input type="checkbox" id="setMetric" checked disabled></div>
+    <div class="row"><div>Reset to seed data<div class="hint">Restore the original 100 imported jumps</div></div><button id="btnReset" class="danger" style="background:#7f1d1d">Reset</button></div>
+  </div>
+  <p style="color:var(--muted);font-size:11.5px;text-align:center;margin-top:16px">
+    DCL Logbook · offline PWA · data stored on this device</p>
+</div>
+
+<button class="fab no-print" id="fab" title="Add jump">+</button>
+
+<div class="tabs no-print">
+  <button data-tab="summary" class="active" onclick="showTab('summary')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 9h4v12h-4z"/></svg>
+    Summary</button>
+  <button data-tab="logbook" onclick="showTab('logbook')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3zM4 4v13"/><path d="M8 8h8M8 12h8"/></svg>
+    Logbook</button>
+  <button data-tab="more" onclick="showTab('more')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+    More</button>
+</div>
+
+<!-- JUMP FORM MODAL -->
+<div class="modal-backdrop" id="formModal">
+  <div class="modal">
+    <div class="grab"></div>
+    <h2 id="formTitle">Add jump</h2>
+    <div class="fgrid">
+      <div class="field"><label>Jump number</label><input id="fNum" type="number" min="1" inputmode="numeric"></div>
+      <div class="field"><label>Date *</label><input id="fDate" type="date" required></div>
+      <div class="field"><label>Exit altitude (m)</label><input id="fExit" type="number" min="0" inputmode="numeric" placeholder="e.g. 3150"></div>
+      <div class="field"><label>Deploy altitude (m)</label><input id="fDeploy" type="number" min="0" inputmode="numeric" placeholder="e.g. 950"></div>
+      <div class="field"><label>Freefall time (s)</label><input id="fFft" type="number" min="0" inputmode="numeric" placeholder="e.g. 42"></div>
+      <div class="field"><label>Jump type</label><input id="fType" list="dlType" placeholder="e.g. 250lb"><datalist id="dlType"></datalist></div>
+      <div class="field"><label>Aircraft</label><input id="fAircraft" list="dlAircraft" placeholder="e.g. C130 Hercules Lockheed"><datalist id="dlAircraft"></datalist></div>
+      <div class="field"><label>Drop zone</label><input id="fDz" list="dlDz" placeholder="e.g. nella"><datalist id="dlDz"></datalist></div>
+      <div class="field"><label>Gear (parachute)</label><input id="fGear" list="dlGear" placeholder="e.g. MT1-XX"><datalist id="dlGear"></datalist></div>
+      <div class="field full check-row"><input type="checkbox" id="fCut"><label for="fCut" style="font-size:14px;text-transform:none;letter-spacing:0">Cutaway (main released)</label></div>
+      <div class="field full"><label>Notes</label><textarea id="fNotes" placeholder="e.g. nn risulta su altimetro"></textarea>
+      <div class="note">Leave a field empty to mark it N/R (not recorded) — it will be excluded from stats.</div></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn secondary" id="btnDelete" style="display:none">Delete</button>
+      <button class="btn secondary" id="btnCancel">Cancel</button>
+      <button class="btn" id="btnSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<input type="file" id="fileInput" accept=".json,.csv" style="display:none">
+
+<script>
+const SEED = {"jumps": [], "meta": {"types": [], "aircraft": [], "dzs": [], "gear": []}, "buildDate": "2026-09-06"};
+const LS_KEY='dcl-logbook-v1';
+let DB, editingNum=null, pendingImport=null;
+
+function load(){
+  try{ const raw=localStorage.getItem(LS_KEY); if(raw){DB=JSON.parse(raw);return;} }catch(e){}
+  DB=JSON.parse(JSON.stringify(SEED)); save();
+}
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }
+
+/* ---------- helpers ---------- */
+const $=id=>document.getElementById(id);
+const NR='N/R';
+const nr=v=>(v===null||v===undefined||v==='')?NR:v;
+function fmtDate(iso){ if(!iso) return NR; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function fmtFft(s){ if(s===null||s===undefined) return NR;
+  const h=Math.floor(s/3600), m=Math.floor(s%3600/60), ss=s%60;
+  if(h) return `${h}h ${m}m ${ss}s`; if(m) return `${m}m ${ss}s`; return `${ss}s`; }
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200); }
+function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- tabs ---------- */
+function showTab(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $('page-'+name).classList.add('active');
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+  $('fab').style.display = name==='logbook' ? 'block' : 'none';
+  window.scrollTo(0,0);
+}
+
+/* ---------- stats ---------- */
+function stats(){
+  const J=DB.jumps;
+  const ffts=J.filter(j=>j.fft!==null).map(j=>j.fft);
+  const alts=J.filter(j=>j.exitAlt!==null).map(j=>j.exitAlt);
+  const totalFft=ffts.reduce((a,b)=>a+b,0);
+  const maxFft=ffts.length?Math.max(...ffts):null;
+  const maxAlt=alts.length?Math.max(...alts):null;
+  const avg=ffts.length?Math.round(totalFft/ffts.length):null;
+  const cut=J.filter(j=>j.cutaway).length;
+  const byNum=n=>J.find(j=>j.n===n);
+  const maxFftJump=maxFft!==null?byNum(J.find(j=>j.fft===maxFft).n):null;
+  const maxAltJump=maxAlt!==null?byNum(J.find(j=>j.exitAlt===maxAlt).n):null;
+  return {count:J.length,totalFft,maxFft,maxAlt,avg,cut,maxFftJump,maxAltJump,
+    dzs:new Set(J.map(j=>j.dz).filter(Boolean)).size,
+    aircraft:new Set(J.map(j=>j.aircraft).filter(Boolean)).size,
+    first:J.length?J.reduce((a,b)=>a.date<b.date?a:b).date:null,
+    last:J.length?J.reduce((a,b)=>a.date>b.date?a:b).date:null};
+}
+function renderSummary(){
+  const s=stats();
+  $('bannerSub').textContent=`${s.count} jumps logged`;
+  $('stTotal').textContent=s.count;
+  $('stTotalSub').textContent=`from ${fmtDate(s.first)} to ${fmtDate(s.last)}`;
+  $('stFft').textContent=fmtFft(s.totalFft);
+  $('stFftSub').textContent=s.avg!==null?`avg ${s.avg}s per jump`:'';
+  $('stCut').textContent=s.cut;
+  $('stMaxAlt').textContent=s.maxAlt!==null?s.maxAlt+' m':NR;
+  $('stMaxAltSub').textContent=s.maxAltJump?`jump #${s.maxAltJump.n} · ${fmtDate(s.maxAltJump.date)}`:'';
+  $('stMaxFft').textContent=s.maxFft!==null?fmtFft(s.maxFft):NR;
+  $('stMaxFftSub').textContent=s.maxFftJump?`jump #${s.maxFftJump.n} · ${fmtDate(s.maxFftJump.date)}`:'';
+  $('recAlt').textContent=s.maxAlt!==null?`${s.maxAlt} m`:`${NR}`;
+  $('recFft').textContent=s.maxFft!==null?`${s.maxFft} s`:`${NR}`;
+  $('recAvg').textContent=s.avg!==null?`${s.avg} s`:`${NR}`;
+  $('recDz').textContent=s.dzs;
+  $('recAc').textContent=s.aircraft;
+  $('recFirst').textContent=fmtDate(s.first);
+  $('recLast').textContent=fmtDate(s.last);
+  $('cardMaxAlt').onclick=()=>s.maxAltJump&&openForm(s.maxAltJump.n);
+  $('cardMaxFft').onclick=()=>s.maxFftJump&&openForm(s.maxFftJump.n);
+}
+
+/* ---------- logbook ---------- */
+function renderLogbook(){
+  const q=($('search').value||'').toLowerCase();
+  const yr=$('filterYear').value;
+  const years=[...new Set(DB.jumps.map(j=>j.date.slice(0,4)))].sort().reverse();
+  if($('filterYear').options.length-1!==years.length){
+    $('filterYear').innerHTML='<option value="">All years</option>'+years.map(y=>`<option>${y}</option>`).join('');
+    if(yr) $('filterYear').value=yr;
+  }
+  let list=[...DB.jumps].sort((a,b)=>b.n-a.n);
+  if(yr) list=list.filter(j=>j.date.startsWith(yr));
+  if(q) list=list.filter(j=>[j.type,j.dz,j.aircraft,j.gear,j.notes].some(v=>String(v||'').toLowerCase().includes(q)));
+  $('jumpList').innerHTML=list.map(j=>`
+    <div class="jump-item" onclick="openForm(${j.n})">
+      <div class="jump-num">#${j.n}</div>
+      <div class="jump-main">
+        <div class="t">${esc(j.type||'Jump')} ${j.cutaway?'<span class="cut-badge">CUTAWAY</span>':''}</div>
+        <div class="s">${fmtDate(j.date)} · ${esc(nr(j.dz))} · ${esc(nr(j.aircraft))}</div>
+      </div>
+      <div class="jump-metrics">
+        ${j.exitAlt!==null?`<b>${j.exitAlt}</b> m`:`alt <span class="flag">N/R</span>`}<br>
+        ${j.fft!==null?`<b>${j.fft}</b> s fft`:`fft <span class="flag">N/R</span>`}
+      </div>
+    </div>`).join('') || '<p style="color:var(--muted);text-align:center;padding:30px 0">No jumps match.</p>';
+}
+
+/* ---------- gear (More) ---------- */
+function renderGear(){
+  const counts={};
+  DB.jumps.forEach(j=>{ const g=(j.gear||'').trim()||'(not recorded)'; counts[g]=(counts[g]||0)+1; });
+  const gearSel=Object.keys(counts).sort();
+  $('gearList').innerHTML=gearSel.map(g=>`
+    <div class="row"><div>${esc(g)}<div class="hint">parachute used on ${counts[g]} jump${counts[g]>1?'s':''}</div></div></div>`).join('');
+  const cur=$('setGear').value;
+  $('setGear').innerHTML='<option value="">— none —</option>'+gearSel.map(g=>`<option>${esc(g)}</option>`).join('');
+  $('setGear').value=cur;
+  $('dlGear').innerHTML=gearSel.filter(g=>g!=='(not recorded)').map(g=>`<option value="${esc(g)}">`).join('');
+}
+
+/* ---------- datalists ---------- */
+function renderDatalists(){
+  const u=(k,el)=>{ $(el).innerHTML=[...new Set(DB.jumps.map(j=>j[k]).filter(Boolean))].sort().map(v=>`<option value="${esc(v)}">`).join(''); };
+  u('type','dlType'); u('aircraft','dlAircraft'); u('dz','dlDz');
+}
+
+/* ---------- form ---------- */
+function nextNumber(){ return DB.jumps.reduce((m,j)=>Math.max(m,j.n),0)+1; }
+function openForm(num){
+  editingNum=num??null;
+  const j=num!=null?DB.jumps.find(x=>x.n===num):null;
+  $('formTitle').textContent=j?`Edit jump #${j.n}`:'Add jump';
+  $('fNum').value=j?j.n:(localStorage.getItem('dcl-autoNum')!=='0'?nextNumber():'');
+  $('fDate').value=j?j.date:'';
+  $('fExit').value=j&&j.exitAlt!==null?j.exitAlt:'';
+  $('fDeploy').value=j&&j.deployAlt!==null?j.deployAlt:'';
+  $('fFft').value=j&&j.fft!==null?j.fft:'';
+  $('fType').value=j?j.type||'':'';
+  $('fAircraft').value=j?j.aircraft||'':'';
+  $('fDz').value=j?j.dz||'':'';
+  $('fGear').value=j?j.gear||'' :($('setGear').value||'');
+  $('fCut').checked=j?!!j.cutaway:false;
+  $('fNotes').value=j?j.notes||'':'';
+  $('btnDelete').style.display=j?'block':'none';
+  $('formModal').classList.add('open');
+  setTimeout(()=>$('fDate').focus(),150);
+}
+function closeForm(){ $('formModal').classList.remove('open'); editingNum=null; }
+function saveForm(){
+  const nRaw=$('fNum').value.trim();
+  const n=parseInt(nRaw,10);
+  if(!nRaw||isNaN(n)||n<1){ toast('Jump number is required'); return; }
+  const date=$('fDate').value;
+  if(!date){ toast('Date is required'); return; }
+  if(DB.jumps.some(j=>j.n===n&&j.n!==editingNum)){ toast(`Jump #${n} already exists`); return; }
+  const val=id=>{ const v=$(id).value.trim(); return v===''?null:(isNaN(+v)?v:+v); };
+  const jump={ n, date,
+    exitAlt:val('fExit'), deployAlt:val('fDeploy'), fft:val('fFft'),
+    type:$('fType').value.trim(), aircraft:$('fAircraft').value.trim(),
+    dz:$('fDz').value.trim(), gear:$('fGear').value.trim(),
+    cutaway:$('fCut').checked, notes:$('fNotes').value.trim() };
+  ['exitAlt','deployAlt','fft'].forEach(k=>{ if(jump[k]!==null&&typeof jump[k]==='string') jump[k]=null; });
+  if(editingNum!=null){ DB.jumps=DB.jumps.map(j=>j.n===editingNum?jump:j); }
+  else DB.jumps.push(jump);
+  DB.jumps.sort((a,b)=>a.n-b.n);
+  save(); renderAll(); closeForm();
+  toast(editingNum!=null?`Jump #${n} updated`:`Jump #${n} added`);
+}
+function deleteJump(){
+  if(editingNum==null) return;
+  const n=editingNum;
+  if(!confirm(`Delete jump #${n}? This cannot be undone.`)) return;
+  DB.jumps=DB.jumps.filter(j=>j.n!==n);
+  save(); renderAll(); closeForm(); toast(`Jump #${n} deleted`);
+}
+
+/* ---------- export ---------- */
+function download(name, mime, content){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:mime}));
+  a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+}
+function exportCsv(){
+  const hdr=['skydive number','date','time','name','icon','location','free_fall_seconds','altitude_m','aircraft','canopy','accuracy','accuracy_unit','description','signature_license_organization','signature_license_identifier','signature_message'];
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const rows=DB.jumps.map(j=>{
+    const desc=[]; if(j.deployAlt!==null) desc.push(`deployment altitude: ${j.deployAlt} m`); if(j.notes) desc.push(j.notes);
+    return [j.n,j.date,'',j.type||'tcl','generic',j.dz||'',j.fft??'',j.exitAlt??'',j.aircraft||'',j.gear||'','','',desc.join('; '),'','',''].map(q).join(',');
+  });
+  download('dcl-logbook.csv','text/csv',[hdr.join(','),...rows].join('\r\n'));
+  toast('CSV exported');
+}
+function exportBackup(){
+  download(`dcl-logbook-backup-${new Date().toISOString().slice(0,10)}.json`,'application/json',
+    JSON.stringify({app:'dcl-logbook',version:1,exported:new Date().toISOString(),data:DB},null,2));
+  toast('Backup exported');
+}
+function exportPdf(){ toast('Opening print dialog…'); setTimeout(()=>window.print(),300); }
+
+/* ---------- import ---------- */
+function pickFile(mode){ pendingImport=mode; const fi=$('fileInput'); fi.value=''; fi.click(); }
+$('fileInput').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f||!pendingImport) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      if(pendingImport==='json'){
+        const o=JSON.parse(r.result);
+        const data=o&&o.data&&o.data.jumps?o.data:o;
+        if(!data.jumps||!Array.isArray(data.jumps)) throw new Error('no jumps array');
+        if(!confirm(`Restore backup with ${data.jumps.length} jumps? Current data will be replaced.`)) return;
+        DB=JSON.parse(JSON.stringify(data)); save(); renderAll(); toast('Backup restored');
+      } else {
+        const text=String(r.result);
+        const lines=text.split(/\r?\n/).filter(l=>l.trim());
+        const parseLine=l=>{ const out=[];let cur='',inQ=false;
+          for(const ch of l){ if(ch==='"'){inQ=!inQ;} else if(ch===','&&!inQ){out.push(cur);cur='';} else cur+=ch; }
+          out.push(cur); return out; };
+        const hdr=parseLine(lines[0]).map(h=>h.trim().toLowerCase());
+        const iN=hdr.indexOf('skydive number'),iD=hdr.indexOf('date'),iF=hdr.indexOf('free_fall_seconds'),
+              iA=hdr.indexOf('altitude_m'),iName=hdr.indexOf('name'),iLoc=hdr.indexOf('location'),
+              iAc=hdr.indexOf('aircraft'),iCan=hdr.indexOf('canopy'),iDesc=hdr.indexOf('description');
+        let added=0,skipped=0;
+        for(const l of lines.slice(1)){
+          const c=parseLine(l); const num=parseInt(c[iN],10);
+          if(isNaN(num)){ skipped++; continue; }
+          if(DB.jumps.some(j=>j.n===num)){ skipped++; continue; }
+          let deployAlt=null,notes=[];
+          (c[iDesc]||'').split(';').forEach(p=>{ p=p.trim(); const m=p.match(/^deployment altitude:\s*(\d+)/i);
+            if(m&&!deployAlt) deployAlt=+m[1]; else if(p) notes.push(p); });
+          DB.jumps.push({n:num,date:c[iD]||'',exitAlt:c[iA]?+c[iA]:null,deployAlt,
+            fft:c[iF]?+c[iF]:null,type:c[iName]||'',aircraft:c[iAc]||'',dz:c[iLoc]||'',
+            gear:c[iCan]||'',cutaway:false,notes:notes.join('; ')});
+          added++;
+        }
+        DB.jumps.sort((a,b)=>a.n-b.n); save(); renderAll();
+        toast(`${added} jumps imported, ${skipped} skipped (missing/duplicate)`);
+      }
+    }catch(err){ alert('Import failed: '+err.message); }
+  };
+  r.readAsText(f);
+});
+
+/* ---------- settings ---------- */
+function loadSettings(){
+  $('setAutoNum').checked=localStorage.getItem('dcl-autoNum')!=='0';
+  $('setMetric').checked=true;
+}
+$('setAutoNum').addEventListener('change',e=>localStorage.setItem('dcl-autoNum',e.target.checked?'1':'0'));
+
+/* ---------- wire up ---------- */
+$('search').addEventListener('input',renderLogbook);
+$('filterYear').addEventListener('change',renderLogbook);
+$('fab').addEventListener('click',()=>openForm(null));
+$('btnCancel').addEventListener('click',closeForm);
+$('btnSave').addEventListener('click',saveForm);
+$('btnDelete').addEventListener('click',deleteJump);
+$('formModal').addEventListener('click',e=>{ if(e.target===$('formModal')) closeForm(); });
+$('btnCsv').addEventListener('click',exportCsv);
+$('btnPdf').addEventListener('click',exportPdf);
+$('btnBk').addEventListener('click',exportBackup);
+$('btnRestore').addEventListener('click',()=>pickFile('json'));
+$('btnImportCsv').addEventListener('click',()=>pickFile('csv'));
+$('btnReset').addEventListener('click',()=>{
+  if(confirm('Reset all data to the original 100 seed jumps? Everything added since will be lost.')){
+    DB=JSON.parse(JSON.stringify(SEED)); save(); renderAll(); toast('Reset to seed data');
+  }
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeForm(); });
+
+function renderAll(){ renderSummary(); renderLogbook(); renderGear(); renderDatalists(); }
+load(); loadSettings(); renderAll(); showTab('summary');
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
