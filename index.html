@@ -63,8 +63,14 @@ body{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
 #page-summary::before{content:'';position:fixed;inset:0;margin:auto;
   width:min(92vmin,560px);height:min(92vmin,560px);
   background:url('icon-512.png') center/contain no-repeat;
-  opacity:.08;pointer-events:none;z-index:0}
+  opacity:.15;pointer-events:none;z-index:0}
 #page-summary .summary-fill,#page-summary .section-title,#page-summary .card{position:relative;z-index:1}
+
+/* Startup splash: full-screen crest on every open, auto-fades after 2s */
+#splash{position:fixed;inset:0;z-index:10001;background:#0c120b;
+  display:flex;align-items:center;justify-content:center;transition:opacity .5s ease}
+#splash img{width:100vw;height:100vh;object-fit:contain}
+#splash.fade{opacity:0;pointer-events:none}
 .section-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;
   letter-spacing:.8px;margin:18px 2px 8px}
 .scroll-hint{text-align:center;color:var(--muted);font-size:12.5px;padding:6px 0 2px;
@@ -176,6 +182,8 @@ input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
 </style>
 </head>
 <body>
+
+<div id="splash"><img src="icon-512.png" alt="DCL Logbook"></div>
 
 <div class="banner">
   <h1>DCL Logbook</h1>
@@ -891,6 +899,16 @@ function requireActivation(){
     setTimeout(()=>toast('Activated ✓'),400);
   }
 }
+
+/* ---------- startup splash: hold 2s, then fade out ---------- */
+(function(){
+  const sp=document.getElementById('splash');
+  if(!sp) return;
+  setTimeout(()=>{
+    sp.classList.add('fade');
+    setTimeout(()=>sp.remove(),550);
+  },2000);
+})();
 
 /* ---------- revocation check (online, at every boot) ---------- */
 const REVOKE_URL='revoked.json';
